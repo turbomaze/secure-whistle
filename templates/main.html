@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/milligram/1.3.0/milligram.min.css">
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+  <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+  <link rel="stylesheet" href="//cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
+  <link rel="stylesheet" href="static/css/style.css">
+
+  <script src="static/js/main.js"></script>
+
+  <title> Secure Confessions </title>
+</head>
+<body>
+  <h3> Secure Confessions </h3>
+
+  <hr>
+
+  <code>GET /public/get/id</code> get the public key with bucket id <code>id</code><br>
+  <code>GET /private/get/id</code> (authenticated) get the private key with bucket id <code>id</code><br>
+  <code>GET /ledger</code> return all the valid public keys in the ledger<br>
+  <code>POST /ledger/add</code> add a public key / signature pair to the ledger<br>
+  <code>POST /confess</code> confess a message, signed with a ring signature<br>
+
+  <hr>
+
+  <small>made with <code>code</code> by the pkt boyes</small>
+</body>
+</html>
