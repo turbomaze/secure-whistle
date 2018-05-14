@@ -1,14 +1,18 @@
 import os
+import os.path
 import random
 import requests
+from subprocess import call
 from struct import pack
 from hashlib import sha256 as H
-from flask import Flask, render_template, redirect, request, send_from_directory
+from flask import Flask, render_template, redirect, request, send_from_directory, jsonify
 
-app = Flask(__name__)
 auth_endpoint = 'https://oidc.mit.edu/authorize'
 token_endpoint = 'https://oidc.mit.edu/token'
 user_endpoint = 'https://oidc.mit.edu/userinfo'
+num_buckets = 45
+
+app = Flask(__name__)
 valid_states = {}
 
 def get_sha256(seed):
@@ -25,21 +29,24 @@ def get_random_nonce():
 # home
 @app.route('/')
 def main():
-    return render_template('main.html', login_url='/bucket/37')
+    return render_template('main.html', login_url='/bucket/1')
 
 @app.route('/bucket/<int:bucket_id>')
 def get_bucket_key(bucket_id):
-    state = get_random_nonce()
-    nonce = get_random_nonce()
-    url = auth_endpoint + '?'
-    url += 'client_id=' + os.environ['CLIENT_ID']
-    url += '&response_type=code'
-    url += '&scope=openid,email'
-    url += '&redirect_uri=https://confess.anthony.ai/private'
-    url += '&state=' + state
-    url += '&nonce=' + nonce
-    valid_states[state] = bucket_id
-    return redirect(url)
+    if bucket_id >= num_buckets:
+        return jsonify({'error': 'there are only %d bucket keys' % num_buckets})
+    else:
+        state = get_random_nonce()
+        nonce = get_random_nonce()
+        url = auth_endpoint + '?'
+        url += 'client_id=' + os.environ['CLIENT_ID']
+        url += '&response_type=code'
+        url += '&scope=openid,email'
+        url += '&redirect_uri=https://confess.anthony.ai/private'
+        url += '&state=' + state
+        url += '&nonce=' + nonce
+        valid_states[state] = bucket_id
+        return redirect(url)
 
 @app.route('/private')
 def get_private_key():
@@ -73,18 +80,25 @@ def get_private_key():
             if info.status_code == 200 and 'email' in info.json():
                 email = info.json()['email']
 
-                # TODO validate their email can get this bucket key
-                # TODO actually send private keys
-            
+                # TODO validate that their email can get this bucket key (need sqlite db)
+                key_file_name = 'key%d' % bucket_id
+                full_key_path = './bucket_keys/%s' % key_file_name
+                if not os.path.isfile(full_key_path):
+                    call([
+                        'ssh-keygen', '-t', 'ecdsa',
+                        '-b', '256', '-N', '', '-f', full_key_path
+                    ])
+    
+                
                 # give them the bucket key
                 return send_from_directory(
                      './bucket_keys',
-                     'key%d' % bucket_id,
+                     key_file_name,
                      mimetype='text/plain'
                 )
-    else:
-        # not valid, reject user
-        return redirect('/')
+
+    # not valid, reject user
+    return jsonify({'error': 'unsuccessful authentication'})
 
 if __name__ == '__main__':
     print 'starting server'
