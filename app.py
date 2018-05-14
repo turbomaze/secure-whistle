@@ -3,7 +3,7 @@ import random
 import requests
 from struct import pack
 from hashlib import sha256 as H
-from flask import Flask, render_template, redirect, request, jsonify
+from flask import Flask, render_template, redirect, request, send_from_directory
 
 app = Flask(__name__)
 auth_endpoint = 'https://oidc.mit.edu/authorize'
@@ -77,14 +77,11 @@ def get_private_key():
                 # TODO actually send private keys
             
                 # give them the bucket key
-                return render_template(
-                    'bucket.html',
-                    bucket_id=bucket_id,
-                    bucket_key=get_sha256('secret lol' + str(bucket_id)),
-                    email=email
+                return send_from_directory(
+                     './bucket_keys',
+                     'key%d' % bucket_id,
+                     mimetype='text/plain'
                 )
-
-        return render_template('/')
     else:
         # not valid, reject user
         return redirect('/')
