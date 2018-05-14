@@ -3,65 +3,88 @@ import random
 import requests
 from struct import pack
 from hashlib import sha256 as H
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, jsonify
 
 app = Flask(__name__)
-token_endpoint = 'https://oidc.mit.edu/authorize'
-state_bucket_chars = 4
+auth_endpoint = 'https://oidc.mit.edu/authorize'
+token_endpoint = 'https://oidc.mit.edu/token'
+user_endpoint = 'https://oidc.mit.edu/userinfo'
 valid_states = {}
 
-def get_random_nonce(payload=''):
+def get_sha256(seed):
     h = H()
-    h.update(''.join([pack('>Q', random.getrandbits(64))]))
-    raw = h.digest().encode('hex')[:64]
-    left_padding = state_bucket_chars - len(payload)
-    return raw[:-state_bucket_chars] + ('0' * left_padding) + payload
+    h.update(seed)
+    return h.digest().encode('hex')
+
+def get_random_nonce():
+    seed = ''.join([pack('>Q', random.getrandbits(64))])
+    return get_sha256(seed)[:64]
 
 # routes
 # ==
 # home
 @app.route('/')
 def main():
-    return render_template('main.html', login_url='/private/37')
+    return render_template('main.html', login_url='/bucket/37')
 
-@app.route('/private/<bucket_id>')
-def get_private(bucket_id):
+@app.route('/bucket/<int:bucket_id>')
+def get_bucket_key(bucket_id):
     state = get_random_nonce()
     nonce = get_random_nonce()
-    url = 'https://oidc.mit.edu/authorize?'
+    url = auth_endpoint + '?'
     url += 'client_id=' + os.environ['CLIENT_ID']
     url += '&response_type=code'
-    url += '&scope=openid'
-    url += '&redirect_uri=https://confess.anthony.ai/bucket'
+    url += '&scope=openid,email'
+    url += '&redirect_uri=https://confess.anthony.ai/private'
     url += '&state=' + state
     url += '&nonce=' + nonce
     valid_states[state] = bucket_id
     return redirect(url)
 
-@app.route('/bucket')
-def get_bucket():
+@app.route('/private')
+def get_private_key():
     code = request.args.get('code')
     state = request.args.get('state')
     if state in valid_states:
+        bucket_id = valid_states[state]
+        del valid_states[state]
+
         # get the token
-        foo = requests.post(
+        resp = requests.post(
             token_endpoint,
             auth=(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET']),
             data={
               'grant_type': 'authorization_code',
               'code': code,
-              'redirect_uri': 'https://confess.anthony.ai/login'
+              'redirect_uri': 'https://confess.anthony.ai/private'
             }
         )
 
-        if True:
-            # give them the bucket key
-            bucket_id = valid_states[state]
-            print 'sending key %d' % bucket_id
+        if resp.status_code == 200 and 'access_token' in resp.json():
+            # get their kerb
+            access_token = resp.json()['access_token']
+            info = requests.get(
+                user_endpoint,
+                headers={
+                  'Authorization': 'Bearer ' + access_token,
+                }
+            )
 
-        del valid_states[state]
+            if info.status_code == 200 and 'email' in info.json():
+                email = info.json()['email']
 
-        return render_template('login.html')
+                # TODO validate their email can get this bucket key
+                # TODO actually send private keys
+            
+                # give them the bucket key
+                return render_template(
+                    'bucket.html',
+                    bucket_id=bucket_id,
+                    bucket_key=get_sha256('secret lol' + str(bucket_id)),
+                    email=email
+                )
+
+        return render_template('/')
     else:
         # not valid, reject user
         return redirect('/')
