@@ -18,13 +18,16 @@
 
   <hr>
 
-  <code>GET /public/get/id</code> get the public key with bucket id <code>id</code><br>
-  <code>GET /private/get/id</code> (authenticated) get the private key with bucket id <code>id</code><br>
+  <code>GET /bucket/id</code> start the auth process for getting private key <code>id</code><br>
+  <code>GET /private</code> after successful auth, send the private bucket key<br>
+  <code>GET /public/id</code> send the user public key <code>id</code><br>
   <code>GET /ledger</code> return all the valid public keys in the ledger<br>
   <code>POST /ledger/add</code> add a public key / signature pair to the ledger<br>
   <code>POST /confess</code> confess a message, signed with a ring signature<br>
 
-  <a href="{{ login_url }}"> login </a>
+  <br>
+
+  <a href="{{ login_url }}"> click to download a bucket key </a>
 
   <hr>
 
