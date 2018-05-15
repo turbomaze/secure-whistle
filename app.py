@@ -35,14 +35,37 @@ def get_random_nonce():
 def main():
     return render_template('main.html', login_url='/bucket/1')
 
+# wipe the database
 @app.route('/wipedb')
 def wipe():
     db.purge_table('user')
     return jsonify({'status': 'ok'})
 
+# get a public key
+@app.route('/public/<int:bucket_id>')
+def get_public_bucket_key(bucket_id):
+    if bucket_id >= num_buckets:
+        return jsonify({'error': 'there are only %d bucket keys' % num_buckets})
+    else:
+        # create the key file if it's not there
+        key_file_name = 'key%d' % bucket_id
+        full_key_path = './bucket_keys/%s' % key_file_name
+        if not os.path.isfile(full_key_path):
+            call([
+                'ssh-keygen', '-t', 'ecdsa',
+                '-b', '256', '-N', '', '-f', full_key_path
+            ])
+        
+        # give them the bucket key
+        return send_from_directory(
+             './bucket_keys',
+             key_file_name + '.pub',
+             mimetype='text/plain'
+        )
+
 # initiate private bucket key acquisition flow
 @app.route('/bucket/<int:bucket_id>')
-def get_bucket_key(bucket_id):
+def get_private_bucket_key(bucket_id):
     if bucket_id >= num_buckets:
         return jsonify({'error': 'there are only %d bucket keys' % num_buckets})
     else:
