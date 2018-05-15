@@ -55,7 +55,7 @@ def get_public_bucket_key(bucket_id):
                 'ssh-keygen', '-t', 'ecdsa',
                 '-b', '256', '-N', '', '-f', full_key_path
             ])
-        
+
         # give them the bucket key
         return send_from_directory(
              './bucket_keys',
@@ -129,7 +129,7 @@ def get_private_key():
                     # record them as having received this bucket
                     if len(u) == 0:
                         users.insert({'email': email, 'bucket_id': bucket_id})
-                    
+
                     # give them the bucket key
                     return send_from_directory(
                          './bucket_keys',
