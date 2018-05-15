@@ -41,6 +41,11 @@ def wipe():
     db.purge_table('user')
     return jsonify({'status': 'ok'})
 
+# return the number of buckets
+@app.route('/bucket/count')
+def bucket_count():
+    return jsonify(num_buckets)
+
 # get a public key
 @app.route('/public/<int:bucket_id>')
 def get_public_bucket_key(bucket_id):
