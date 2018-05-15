@@ -2,6 +2,7 @@ import os
 import os.path
 import random
 import requests
+from tinydb import TinyDB, Query
 from subprocess import call
 from struct import pack
 from hashlib import sha256 as H
@@ -12,6 +13,9 @@ token_endpoint = 'https://oidc.mit.edu/token'
 user_endpoint = 'https://oidc.mit.edu/userinfo'
 num_buckets = 45
 
+db = TinyDB('./db.json')
+users = db.table('user', cache_size=0)
+User = Query()
 app = Flask(__name__)
 valid_states = {}
 
@@ -31,6 +35,12 @@ def get_random_nonce():
 def main():
     return render_template('main.html', login_url='/bucket/1')
 
+@app.route('/wipedb')
+def wipe():
+    db.purge_table('user')
+    return jsonify({'status': 'ok'})
+
+# initiate private bucket key acquisition flow
 @app.route('/bucket/<int:bucket_id>')
 def get_bucket_key(bucket_id):
     if bucket_id >= num_buckets:
@@ -48,6 +58,7 @@ def get_bucket_key(bucket_id):
         valid_states[state] = bucket_id
         return redirect(url)
 
+# finish private bucket key acquisition
 @app.route('/private')
 def get_private_key():
     code = request.args.get('code')
@@ -80,22 +91,30 @@ def get_private_key():
             if info.status_code == 200 and 'email' in info.json():
                 email = info.json()['email']
 
-                # TODO validate that their email can get this bucket key (need sqlite db)
-                key_file_name = 'key%d' % bucket_id
-                full_key_path = './bucket_keys/%s' % key_file_name
-                if not os.path.isfile(full_key_path):
-                    call([
-                        'ssh-keygen', '-t', 'ecdsa',
-                        '-b', '256', '-N', '', '-f', full_key_path
-                    ])
-    
-                
-                # give them the bucket key
-                return send_from_directory(
-                     './bucket_keys',
-                     key_file_name,
-                     mimetype='text/plain'
-                )
+                u = users.search(User.email == email)
+                print u
+                if len(u) == 0 or u[0]['bucket_id'] == bucket_id:
+                    # create the key file if it's not there
+                    key_file_name = 'key%d' % bucket_id
+                    full_key_path = './bucket_keys/%s' % key_file_name
+                    if not os.path.isfile(full_key_path):
+                        call([
+                            'ssh-keygen', '-t', 'ecdsa',
+                            '-b', '256', '-N', '', '-f', full_key_path
+                        ])
+
+                    # record them as having received this bucket
+                    if len(u) == 0:
+                        users.insert({'email': email, 'bucket_id': bucket_id})
+                    
+                    # give them the bucket key
+                    return send_from_directory(
+                         './bucket_keys',
+                         key_file_name,
+                         mimetype='text/plain'
+                    )
+                else:
+                    return jsonify({'error': 'you already have key %d' % u[0]['bucket_id']})
 
     # not valid, reject user
     return jsonify({'error': 'unsuccessful authentication'})
