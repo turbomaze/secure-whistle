@@ -22,6 +22,7 @@ db = TinyDB('./db.json')
 users = db.table('user', cache_size=0)
 ledger = db.table('ledger', cache_size=0)
 User = Query()
+Ledger = Query()
 app = Flask(__name__)
 valid_states = {}
 
@@ -83,6 +84,9 @@ def add_to_ledger():
         vk = VerifyingKey.from_pem(open(full_key_path + '_public.pem').read())
         try:
             vk.verify(sig, pub_key)
+            old_key = ledger.get(Ledger.public_key == pub_key)
+            if old_key != None:
+                ledger.remove(doc_ids=[old_key.doc_id])
             ledger.insert({
                 'public_key': pub_key,
                 'b64_signature': b64_sig,
