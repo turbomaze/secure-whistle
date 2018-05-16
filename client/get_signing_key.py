@@ -8,12 +8,12 @@ import webbrowser
 base_url = 'https://confess.anthony.ai'
 
 if len(sys.argv) <= 1:
-    print 'usage: ./get_signing_key.py PUBLIC_KEY_FILE'
+    print('usage: ./get_signing_key.py PUBLIC_KEY_FILE')
     sys.exit(0)
 
 public_key_file = sys.argv[1]
 if not os.path.isfile(public_key_file):
-    print 'could not find file at: %s' % public_key_file
+    print('could not find file at: %s' % public_key_file)
     sys.exit(0)
 
 try:
@@ -25,4 +25,4 @@ try:
     bucket_id = bucket_id % num_buckets
     webbrowser.open(base_url + '/bucket/' + str(bucket_id), 2)
 except:
-    print 'failed to get the signing key'
+    print('failed to get the signing key')
