@@ -7,9 +7,9 @@ Anonymously share messages with the public while providing group-membership and 
 
 All of these commands assume you're in the `./client` directory.
 
-1. Perform `ssh-keygen -t ecdsa -b 256 -N  -f KEY_NAME` to generate personal public/private keys.
-2. Run `./get_signing_key.py KEY_NAME`, which will open a browser window and walk you through OIDC auth. Download the resulting private key.
-3. [TODO] Use the retrieved signing key to add your key to the public ledger.
+1. Do `./generate_keypair.py KEY_PREFIX` to generate personal public/private keys.
+2. Run `./get_signing_key.py PUBLIC_KEY`, which will open a browser window and walk you through OIDC auth. Download the resulting private key.
+3. Use the retrieved signing key to add your key to the public ledger with `./add_key_to_ledger.py YOUR_PUB_KEY DOWNLOADED_PRIV_KEY`.
 4. [TODO] Consult the public ledger to ring-sign a message and confess it.
 
 ## Development
