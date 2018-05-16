@@ -6,7 +6,7 @@ import time
 import random
 import requests
 import base64
-from ecdsa import VerifyingKey, SigningKey, NIST256p
+from ecdsa import VerifyingKey, SigningKey, SECP256k1
 from tinydb import TinyDB, Query
 from struct import pack
 from hashlib import sha256 as H
@@ -111,7 +111,7 @@ def get_public_bucket_key(bucket_id):
         key_file_name = 'bucket%d' % bucket_id
         full_key_path = root_dir + '/bucket_keys/%s' % key_file_name
         if not os.path.isfile(full_key_path + '_public.pem'):
-            sk = SigningKey.generate(NIST256p)
+            sk = SigningKey.generate(SECP256k1)
             vk = sk.get_verifying_key()
             open(full_key_path + '_private.pem', 'wb').write(sk.to_pem())
             open(full_key_path + '_public.pem', 'wb').write(vk.to_pem())
@@ -180,7 +180,7 @@ def get_private_key():
                     key_file_name = 'bucket%d' % bucket_id
                     full_key_path = root_dir + '/bucket_keys/%s' % key_file_name
                     if not os.path.isfile(full_key_path + '_private.pem'):
-                        sk = SigningKey.generate(NIST256p)
+                        sk = SigningKey.generate(SECP256k1)
                         vk = sk.get_verifying_key()
                         open(full_key_path + '_private.pem', 'wb').write(sk.to_pem())
                         open(full_key_path + '_public.pem', 'wb').write(vk.to_pem())
