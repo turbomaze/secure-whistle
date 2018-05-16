@@ -8,6 +8,7 @@ from ecdsa.ecdsa import curve_secp256k1
 from ecdsa.ellipticcurve import Point
 from linkable_ring_signature import ring_signature, verify_ring_signature
 from linkable_ring_signature import export_signature_to_string
+from linkable_ring_signature import import_signature_from_string
 
 base_url = 'https://confess.anthony.ai'
 
@@ -46,8 +47,9 @@ if ledger.status_code == 200:
     # compute the ring sig
     ring_sig = ring_signature(my_private_key, i, message, public_keys)
     exported = export_signature_to_string(public_keys, message, ring_sig)
-    imported = import_signature(exported)
-    assert(verify_ring_signature(message, public_keys, *ring_sig))
+    y, m, s = import_signature_from_string(exported)
+    assert(verify_ring_signature(m, y, *s))
+
     print('success!')
 else:
     print('bad ledger GET request')
