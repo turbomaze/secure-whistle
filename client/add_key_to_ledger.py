@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.insert(0, './ecc_linkable_ring_signatures/')
+sys.path.insert(0, '../ecc_linkable_ring_signatures/')
 import requests
 import base64
 from ecdsa import SigningKey

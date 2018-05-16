@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys
-sys.path.insert(0, './ecc_linkable_ring_signatures/')
+sys.path.insert(0, '../ecc_linkable_ring_signatures/')
 from ecdsa import SigningKey, NIST256p
 
 if len(sys.argv) <= 1:
