@@ -26,6 +26,8 @@ public_key = open(public_key_file, 'r').read()
 signing_key = SigningKey.from_pem(open(signing_key_file).read())
 signature = signing_key.sign(public_key)
 
+print(export_signature_)
+
 resp = requests.post(base_url + '/ledger/add', data={
     'pub_key': public_key,
     'sig': base64.b64encode(signature)
