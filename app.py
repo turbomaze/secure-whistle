@@ -1,9 +1,11 @@
 import os
 import os.path
+import time
 import random
 import requests
+import base64
+from ecdsa import VerifyingKey, SigningKey, NIST256p
 from tinydb import TinyDB, Query
-from subprocess import call
 from struct import pack
 from hashlib import sha256 as H
 from flask import Flask, render_template, redirect, request, send_from_directory, jsonify
@@ -15,6 +17,7 @@ num_buckets = 45
 
 db = TinyDB('./db.json')
 users = db.table('user', cache_size=0)
+ledger = db.table('ledger', cache_size=0)
 User = Query()
 app = Flask(__name__)
 valid_states = {}
@@ -27,6 +30,12 @@ def get_sha256(seed):
 def get_random_nonce():
     seed = ''.join([pack('>Q', random.getrandbits(64))])
     return get_sha256(seed)[:64]
+
+def get_bucket_for_key(public_key):
+    bucket_id = 0
+    for char in public_key:
+        bucket_id ^= ord(char)
+    return bucket_id % num_buckets
 
 # routes
 # ==
@@ -46,6 +55,39 @@ def wipe():
 def bucket_count():
     return jsonify(num_buckets)
 
+# add pub key and signature to the ledger
+@app.route('/ledger/add', methods=['POST'])
+def add_to_ledger():
+    if 'pub_key' not in request.form or 'sig' not in request.form:
+        return jsonify({'error': 'need public key and its signature'})
+    else:
+        pub_key = request.form['pub_key']
+        b64_sig = request.form['sig']
+        sig = base64.b64decode(b64_sig)
+
+        bucket_id = get_bucket_for_key(pub_key)
+        key_file_name = 'bucket%d' % bucket_id
+        full_key_path = './bucket_keys/%s' % key_file_name
+        if not os.path.isfile(full_key_path + '_public.pem'):
+            return jsonify({'error': 'howd u get this key wtf'})
+
+        vk = VerifyingKey.from_pem(open(full_key_path + '_public.pem').read())
+        try:
+            vk.verify(sig, pub_key)
+            ledger.insert({
+                'public_key': pub_key,
+                'b64_signature': b64_sig,
+                'timestamp': time.time()
+            })
+            return jsonify({'status': 'ok'})
+        except:
+            return jsonify({'error': 'bad signature'})
+
+# add pub key and signature to the ledger
+@app.route('/ledger')
+def view_ledger():
+    return jsonify(ledger.all())
+        
 # get a public key
 @app.route('/public/<int:bucket_id>')
 def get_public_bucket_key(bucket_id):
@@ -53,18 +95,18 @@ def get_public_bucket_key(bucket_id):
         return jsonify({'error': 'there are only %d bucket keys' % num_buckets})
     else:
         # create the key file if it's not there
-        key_file_name = 'key%d' % bucket_id
+        key_file_name = 'bucket%d' % bucket_id
         full_key_path = './bucket_keys/%s' % key_file_name
-        if not os.path.isfile(full_key_path):
-            call([
-                'ssh-keygen', '-t', 'ecdsa',
-                '-b', '256', '-N', '', '-f', full_key_path
-            ])
+        if not os.path.isfile(full_key_path + '_public.pem'):
+            sk = SigningKey.generate(NIST256p)
+            vk = sk.get_verifying_key()
+            open(full_key_path + '_private.pem', 'w').write(sk.to_pem())
+            open(full_key_path + '_public.pem', 'w').write(vk.to_pem())
 
         # give them the bucket key
         return send_from_directory(
              './bucket_keys',
-             key_file_name + '.pub',
+             key_file_name + '_public.pem',
              mimetype='text/plain'
         )
 
@@ -120,16 +162,15 @@ def get_private_key():
                 email = info.json()['email']
 
                 u = users.search(User.email == email)
-                print u
                 if len(u) == 0 or u[0]['bucket_id'] == bucket_id:
                     # create the key file if it's not there
-                    key_file_name = 'key%d' % bucket_id
+                    key_file_name = 'bucket%d' % bucket_id
                     full_key_path = './bucket_keys/%s' % key_file_name
-                    if not os.path.isfile(full_key_path):
-                        call([
-                            'ssh-keygen', '-t', 'ecdsa',
-                            '-b', '256', '-N', '', '-f', full_key_path
-                        ])
+                    if not os.path.isfile(full_key_path + '_private.pem'):
+                        sk = SigningKey.generate(NIST256p)
+                        vk = sk.get_verifying_key()
+                        open(full_key_path + '_private.pem', 'w').write(sk.to_pem())
+                        open(full_key_path + '_public.pem', 'w').write(vk.to_pem())
 
                     # record them as having received this bucket
                     if len(u) == 0:
@@ -138,7 +179,7 @@ def get_private_key():
                     # give them the bucket key
                     return send_from_directory(
                          './bucket_keys',
-                         key_file_name,
+                         key_file_name + '_private.pem',
                          mimetype='text/plain'
                     )
                 else:
