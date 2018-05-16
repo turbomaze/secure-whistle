@@ -7,6 +7,7 @@ import random
 import requests
 import base64
 from ecdsa import VerifyingKey, SigningKey, SECP256k1
+from linkable_ring_signature import import_signature_from_string, verify_ring_signature
 from tinydb import TinyDB, Query
 from struct import pack
 from hashlib import sha256 as H
@@ -19,10 +20,9 @@ num_buckets = 45
 
 root_dir = os.path.abspath(__file__ + '/../')
 db = TinyDB('./db.json')
-users = db.table('user', cache_size=0)
-ledger = db.table('ledger', cache_size=0)
-User = Query()
-Ledger = Query()
+users, User = db.table('user', cache_size=0), Query()
+ledger, Ledger = db.table('ledger', cache_size=0), Query()
+confessions, Confession = db.table('confession', cache_size=0), Query()
 app = Flask(__name__)
 valid_states = {}
 
@@ -47,6 +47,10 @@ def get_bucket_for_key(public_key):
 @app.route('/')
 def main():
     return render_template('main.html', login_url='/bucket/1')
+
+@app.route('/confessions')
+def view_confessions():
+    return jsonify(confessions.all())
 
 # wipe the user database
 @app.route('/wipeusers')
@@ -100,6 +104,33 @@ def add_to_ledger():
 @app.route('/ledger')
 def view_ledger():
     return jsonify(ledger.all())
+
+# confess something!
+@app.route('/confess', methods=['POST'])
+def add_confession():
+    if 'signature' not in request.form:
+        return jsonify({'error': 'need serialized signature'})
+    else:
+        try:
+            y, m, s = import_signature_from_string(request.form['signature'])
+            if verify_ring_signature(m, y, *s):
+                # now make sure all the public keys are in the ledger
+                keys = set(map(lambda l: l['public_key'], ledger.all()))
+                all_in_ledger = all(str(p) in keys for p in y)
+                if not all_in_ledger:
+                    return jsonify({'error': 'all public keys must be in ledger'})
+                else:
+                    confessions.insert({
+                        'message': m,
+                        'signature': request.form['signature'],
+                        'timestamp': time.time()
+                    })
+                    return jsonify({'status': 'ok'})
+            else:
+                return jsonify({'error': 'bad signature'})
+        except Exception as e:
+            print(str(e))
+            return jsonify({'error': 'invalid signature serialization'})
 
 # get a public key
 @app.route('/public/<int:bucket_id>')
