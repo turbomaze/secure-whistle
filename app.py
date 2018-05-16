@@ -1,5 +1,7 @@
 import os
 import os.path
+import sys
+sys.path.insert(0, './ecc_linkable_ring_signatures/')
 import time
 import random
 import requests
@@ -25,10 +27,10 @@ valid_states = {}
 def get_sha256(seed):
     h = H()
     h.update(seed)
-    return h.digest().encode('hex')
+    return h.hexdigest()
 
 def get_random_nonce():
-    seed = ''.join([pack('>Q', random.getrandbits(64))])
+    seed = b''.join([pack('>Q', random.getrandbits(64))])
     return get_sha256(seed)[:64]
 
 def get_bucket_for_key(public_key):
@@ -44,10 +46,16 @@ def get_bucket_for_key(public_key):
 def main():
     return render_template('main.html', login_url='/bucket/1')
 
-# wipe the database
-@app.route('/wipedb')
-def wipe():
+# wipe the user database
+@app.route('/wipeusers')
+def wipe_users():
     db.purge_table('user')
+    return jsonify({'status': 'ok'})
+
+# wipe the ledger
+@app.route('/wipeledger')
+def wipe_ledger():
+    db.purge_table('ledger')
     return jsonify({'status': 'ok'})
 
 # return the number of buckets
@@ -100,8 +108,8 @@ def get_public_bucket_key(bucket_id):
         if not os.path.isfile(full_key_path + '_public.pem'):
             sk = SigningKey.generate(NIST256p)
             vk = sk.get_verifying_key()
-            open(full_key_path + '_private.pem', 'w').write(sk.to_pem())
-            open(full_key_path + '_public.pem', 'w').write(vk.to_pem())
+            open(full_key_path + '_private.pem', 'wb').write(sk.to_pem())
+            open(full_key_path + '_public.pem', 'wb').write(vk.to_pem())
 
         # give them the bucket key
         return send_from_directory(
@@ -169,8 +177,8 @@ def get_private_key():
                     if not os.path.isfile(full_key_path + '_private.pem'):
                         sk = SigningKey.generate(NIST256p)
                         vk = sk.get_verifying_key()
-                        open(full_key_path + '_private.pem', 'w').write(sk.to_pem())
-                        open(full_key_path + '_public.pem', 'w').write(vk.to_pem())
+                        open(full_key_path + '_private.pem', 'wb').write(sk.to_pem())
+                        open(full_key_path + '_public.pem', 'wb').write(vk.to_pem())
 
                     # record them as having received this bucket
                     if len(u) == 0:
@@ -189,5 +197,5 @@ def get_private_key():
     return jsonify({'error': 'unsuccessful authentication'})
 
 if __name__ == '__main__':
-    print 'starting server'
+    print('starting server')
     app.run(host='0.0.0.0', debug=True)
