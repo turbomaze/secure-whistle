@@ -17,6 +17,7 @@ token_endpoint = 'https://oidc.mit.edu/token'
 user_endpoint = 'https://oidc.mit.edu/userinfo'
 num_buckets = 45
 
+root_dir = os.path.abspath(__file__ + '/../')
 db = TinyDB('./db.json')
 users = db.table('user', cache_size=0)
 ledger = db.table('ledger', cache_size=0)
@@ -75,7 +76,7 @@ def add_to_ledger():
 
         bucket_id = get_bucket_for_key(pub_key)
         key_file_name = 'bucket%d' % bucket_id
-        full_key_path = './bucket_keys/%s' % key_file_name
+        full_key_path = root_dir + '/bucket_keys/%s' % key_file_name
         if not os.path.isfile(full_key_path + '_public.pem'):
             return jsonify({'error': 'howd u get this key wtf'})
 
@@ -104,7 +105,7 @@ def get_public_bucket_key(bucket_id):
     else:
         # create the key file if it's not there
         key_file_name = 'bucket%d' % bucket_id
-        full_key_path = './bucket_keys/%s' % key_file_name
+        full_key_path = root_dir + '/bucket_keys/%s' % key_file_name
         if not os.path.isfile(full_key_path + '_public.pem'):
             sk = SigningKey.generate(NIST256p)
             vk = sk.get_verifying_key()
@@ -173,7 +174,7 @@ def get_private_key():
                 if len(u) == 0 or u[0]['bucket_id'] == bucket_id:
                     # create the key file if it's not there
                     key_file_name = 'bucket%d' % bucket_id
-                    full_key_path = './bucket_keys/%s' % key_file_name
+                    full_key_path = root_dir + '/bucket_keys/%s' % key_file_name
                     if not os.path.isfile(full_key_path + '_private.pem'):
                         sk = SigningKey.generate(NIST256p)
                         vk = sk.get_verifying_key()
