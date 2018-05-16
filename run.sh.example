@@ -2,4 +2,4 @@ CLIENT_ID=foo
 CLIENT_SECRET=bar
 CLIENT_CONFIG_URL=baz
 REG_ACCESS_TOKEN=quux
-python3 app.py
+python3 ./server/app.py

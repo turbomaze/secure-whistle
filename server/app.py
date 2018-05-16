@@ -1,7 +1,7 @@
 import os
 import os.path
 import sys
-sys.path.insert(0, './ecc_linkable_ring_signatures/')
+sys.path.insert(0, '../ecc_linkable_ring_signatures/')
 import time
 import random
 import requests
@@ -95,7 +95,7 @@ def add_to_ledger():
 @app.route('/ledger')
 def view_ledger():
     return jsonify(ledger.all())
-        
+
 # get a public key
 @app.route('/public/<int:bucket_id>')
 def get_public_bucket_key(bucket_id):
