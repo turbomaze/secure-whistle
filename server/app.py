@@ -1,7 +1,7 @@
 import os
 import os.path
 import sys
-sys.path.insert(0, '../ecc_linkable_ring_signatures/')
+sys.path.insert(0, os.path.abspath(__file__ + '/../../ecc_linkable_ring_signatures'))
 import time
 import random
 import requests
