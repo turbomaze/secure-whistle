@@ -50,6 +50,7 @@ if ledger.status_code == 200:
     y, m, s = import_signature_from_string(exported)
     assert(verify_ring_signature(m, y, *s))
 
-    print('success!')
+    resp = requests.post(base_url + '/confess', data={'signature': exported})
+    print(resp.json())
 else:
     print('bad ledger GET request')
