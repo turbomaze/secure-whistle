@@ -3,6 +3,7 @@ import os.path
 import sys
 sys.path.insert(0, os.path.abspath(__file__ + '/../../ecc_linkable_ring_signatures'))
 import time
+import math
 import random
 import requests
 import base64
@@ -200,6 +201,33 @@ def get_private_key():
 
     # not valid, reject user
     return jsonify({'error': 'unsuccessful authentication'})
+
+# finish private bucket key acquisition
+@app.route('/detect')
+def detect_anomaly():
+    bucket_sizes = [0]*num_buckets
+    total_pub_keys = 0
+    ledger_data = ledger.all()
+    for item in ledger_data:
+        pub_key = item['public_key']
+        bucket_id = get_bucket_for_key(pub_key)
+        bucket_sizes[bucket_id] += 1
+        total_pub_keys += 1
+
+    flagged_buckets = []
+    for i in range(num_buckets):
+        not_i_mean = (total_pub_keys - bucket_sizes[i]) / (num_buckets - 1)
+        not_i_variance = 0 
+        for j in range(num_buckets):
+            if i == j:
+                continue
+            not_i_variance += (not_i_mean - bucket_sizes[j])**2
+        not_i_std_dev = math.sqrt(not_i_variance)
+        # flag as anomaly according to 3 sigma
+        if bucket_sizes[i] > not_i_mean+3*not_i_std_dev or bucket_sizes[i] < not_i_mean-3*not_i_std_dev:
+            flagged_buckets.append(i)
+
+    return jsonify({'bucket_sizes': bucket_sizes, 'flagged_buckets': flagged_buckets})
 
 if __name__ == '__main__':
     print('starting server')
