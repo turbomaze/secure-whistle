@@ -6,6 +6,7 @@ import time
 import random
 import requests
 import base64
+from datetime import datetime
 from ecdsa import VerifyingKey, SigningKey, SECP256k1
 from linkable_ring_signature import import_signature_from_string, verify_ring_signature
 from tinydb import TinyDB, Query
@@ -41,16 +42,34 @@ def get_bucket_for_key(public_key):
         bucket_id ^= ord(char)
     return bucket_id % num_buckets
 
+def clean_up_confession(confession):
+    fmt_str = '%Y/%m/%d @ %H:%M'
+    offset = -4 * 3600 # hacky way to make it eastern time lol
+    date = datetime.fromtimestamp(confession['timestamp'] + offset)
+    return {
+        'doc_id': confession.doc_id,
+        'message': confession['message'],
+        'date': date.strftime(fmt_str)
+    }
+
 # routes
 # ==
 # home
 @app.route('/')
 def main():
-    return render_template('main.html', login_url='/bucket/1')
+    all_confessions = map(
+        clean_up_confession,
+        sorted(confessions.all(), key=lambda x: x['timestamp'], reverse=True)
+    )
+    return render_template('main.html', confessions=all_confessions)
 
-@app.route('/confessions')
-def view_confessions():
+@app.route('/confession/all')
+def dump_confessions():
     return jsonify(confessions.all())
+
+@app.route('/confession/<conf_id>')
+def view_confession(conf_id):
+    return jsonify(confessions.get(doc_id=int(conf_id)))
 
 # wipe the user database
 @app.route('/wipeusers')
