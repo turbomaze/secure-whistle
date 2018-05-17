@@ -18,11 +18,11 @@ First, each user of this system generates a public and private key according to 
 
 If we were to just use ring signatures over ~4000 members of the MIT community, it wouldn't actually matter if an adversarial authentication server knew who owned which public key. However, computing ring signatures with 4000 participants is slow. Thus, we developed a more complex scheme to achieve the same level of anonymity with ring signatures over just ~40 keys.
 
-The central idea is that of a "bucket key": an ecdsa keypair responsible for signing a specific subset of users' public keys. The number of buckets is a parameter depending on the use case; we use 45 buckets and consequently map users' public keys to a number from 0 to 44. Users query the authentication server to request the specific bucket key they need to sign their key. Upon authenticatin via OIDC, they run a command to sign their ring signature public key and add it to a public ledger hosted by the server.
+The central idea is that of a "bucket key": an ecdsa keypair responsible for signing a specific subset of users' public keys. The number of buckets is a parameter depending on the use case; we use 45 buckets and consequently map users' public keys to a number from 0 to 44. Users query the authentication server to request the specific bucket key they need to sign their key. Upon authenticating with OIDC, users can download their specific bucket private key, sign their public key, and add it to a public ledger hosted by the server.
 
-The contents of that ledger are the public keys of users that can authenticate to MIT's OIDC servers. Importantly, the authentication server has no idea which public key is whose. It only knows which bucket each MIT user's key belongs to. Thus, users can compute a ring signature over 45 randomly selected keys from the ledger, one per bucket, and achieve full anonymity.
+The contents of that ledger are the public keys of users certified to be MIT. Importantly, the authentication server has no idea which public key is whose. It only knows which bucket each MIT user's key belongs to. Thus, users can compute a ring signature over 45 randomly selected keys from the ledger, one per bucket, and achieve full anonymity.
 
-In our paper, we describe this scheme in more detail and present an anomaly detection system (not implemented) to identify when secret keys are leaked to members outside of the authenticated group.
+In our paper, we describe this scheme in more detail as well as an anomaly detection mechanism to identify when secret keys are leaked to members outside of the authenticated group.
 
 ## Development
 
