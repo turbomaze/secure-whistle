@@ -14,7 +14,7 @@ All of these commands assume you're in the `./client` directory.
 
 ## Development
 
-This project uses Python3 and Flask. Ensure you have flask/requests/tinydb installed and then run the following commands.
+This project uses Python3 and Flask. Ensure you have flask/requests/tinydb/pysha3 installed and then run the following commands.
 
 1. First time only: `cp run.sh.example run.sh` and update the secrets.
 2. Make an empty `db.json` file if it doesn't exist for TinyDB.
